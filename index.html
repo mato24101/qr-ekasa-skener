@@ -44,7 +44,7 @@
                 <div id="camera-error" class="mt-4 text-center p-3 rounded-lg text-red-700 bg-red-100 font-semibold hidden"></div>
             </div>
 
-            <!-- Stĺpec výsledkov -->
+            <!-- Stĺpec výsledkov a nastavení -->
             <div class="md:w-1/2 flex flex-col gap-6">
                 
                 <!-- Sekcia 1: Surový obsah QR kódu -->
@@ -64,6 +64,27 @@
                     </p>
                     <div id="python-output" class="bg-white p-3 min-h-[6rem] rounded-md border border-emerald-300 whitespace-pre-wrap text-gray-800 text-sm">
                         <span class="text-gray-400">Výsledok API volania.</span>
+                    </div>
+                </div>
+
+                <!-- Sekcia 2.5: Používateľský Vstup (Kategória a Účet) -->
+                <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-inner">
+                    <h2 class="text-xl font-bold text-yellow-800 mb-4">2.5. Nastavenia Transakcie</h2>
+                    
+                    <!-- Výber Kategórie/Podkategórie -->
+                    <div class="mb-4">
+                        <label for="category-select" class="block text-sm font-medium text-yellow-700 mb-1">Kategória / Predajca (Subkategória):</label>
+                        <select id="category-select" class="w-full p-2 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 transition duration-150 shadow-sm text-gray-800">
+                            <!-- Možnosti budú dynamicky naplnené JS -->
+                        </select>
+                    </div>
+
+                    <!-- Výber Účtu -->
+                    <div>
+                        <label for="account-select" class="block text-sm font-medium text-yellow-700 mb-1">Účet (Account):</label>
+                        <select id="account-select" class="w-full p-2 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 transition duration-150 shadow-sm text-gray-800">
+                            <!-- Možnosti budú dynamicky naplnené JS -->
+                        </select>
                     </div>
                 </div>
 
@@ -97,6 +118,60 @@
         // Konštanta pre Cashew App Link URI (Aktualizované na HTTPS transakčný endpoint)
         const DEEP_LINK_SCHEME = "https://cashewapp.web.app/addTransaction";
 
+        // Hardcoded kategórie/subkategórie pre dropdown
+        const CATEGORY_MAP = {
+            'Nakup (Shopping)': { type: 'category', value: 'Shopping' },
+            'Lidl (Subcategory)': { type: 'subcategory', value: 'Lidl' },
+            'Tesco (Subcategory)': { type: 'subcategory', value: 'Tesco' },
+            'Billa (Subcategory)': { type: 'subcategory', value: 'Billa' },
+            'Benzín (Gas)': { type: 'category', value: 'Gas' },
+            'Reštaurácia (Dining)': { type: 'category', value: 'Dining' },
+            'Iné výdavky (Other)': { type: 'category', value: 'Other' },
+        };
+
+        // Hardcoded účty pre dropdown
+        const ACCOUNTS = [
+            'Cash', // Predvolený účet by mal byť hore
+            'Checking Account',
+            'Savings Account',
+            'Credit Card',
+        ];
+
+
+        /**
+         * Dynamicky naplní dropdown menu kategóriami a účtami.
+         */
+        function populateDropdowns() {
+            const categorySelect = document.getElementById('category-select');
+            const accountSelect = document.getElementById('account-select');
+
+            // 1. Naplnenie Kategórií/Subkategórií
+            for (const [label, data] of Object.entries(CATEGORY_MAP)) {
+                const option = document.createElement('option');
+                // Ukladáme celú štruktúru ako JSON string, aby sme vedeli, či ide o 'category' alebo 'subcategory'
+                option.value = JSON.stringify(data); 
+                option.textContent = label;
+                categorySelect.appendChild(option);
+            }
+            
+            // Predvolene nastavíme 'Nakup (Shopping)'
+            categorySelect.querySelector(`[value*='"Shopping"'][value*='"category"']`).selected = true;
+
+
+            // 2. Naplnenie Účtov
+            ACCOUNTS.forEach((account, index) => {
+                const option = document.createElement('option');
+                option.value = account;
+                option.textContent = account;
+                accountSelect.appendChild(option);
+                // Nastavíme prvý účet ako predvolený
+                if (index === 0) {
+                    option.selected = true;
+                }
+            });
+        }
+
+
         /**
          * Odstráni diakritiku (mäkčene a dĺžne) zo slovenského textu.
          * @param {string} text Vstupný text.
@@ -110,8 +185,7 @@
         }
 
         /**
-         * Generuje Cashew transakčný link na základe získaných dát.
-         * Štruktúra: https://cashewapp.web.app/addTransaction?amount=-<PRICE>&title=<SHOP_NAME_NO_DIACRITICS>&category=Shopping&notes=<NOTES>
+         * Generuje Cashew transakčný link na základe získaných dát a výberu používateľa.
          * @param {string} kb_code Kód bločku.
          * @param {string} issueDate Dátum vystavenia.
          * @param {string} shopName Názov predajne.
@@ -120,6 +194,13 @@
          */
         function generateDeepLink(kb_code, issueDate, shopName, totalPrice) {
             
+            // Načítanie vybraných hodnôt
+            const categorySelect = document.getElementById('category-select');
+            const accountSelect = document.getElementById('account-select');
+
+            const selectedCategoryData = JSON.parse(categorySelect.value);
+            const selectedAccount = accountSelect.value;
+
             // 1. Spracovanie názvu (bez diakritiky)
             const title = removeDiacritics(shopName);
 
@@ -128,17 +209,28 @@
             const amount = "-" + String(totalPrice).replace(',', '.'); 
             
             // 3. Vytvorenie poznámky
-            const notes = `${kb_code}`; 
+            const notes = `eKasa Blok ID: ${kb_code} | Dátum: ${issueDate}`; 
 
-            // 4. Manuálna konštrukcia parametrov s encodeURIComponent
-            // Tým sa zabezpečí, že medzery budú kódované ako %20 (namiesto +)
+            // 4. Manuálna konštrukcia základných parametrov
             const params = [
                 `amount=${encodeURIComponent(amount)}`,
                 `title=${encodeURIComponent(title)}`,
-                `category=${encodeURIComponent("Shopping")}`, // Požadovaná pevná hodnota
-                `notes=${encodeURIComponent(notes)}`
+                `notes=${encodeURIComponent(notes)}`,
+                `account=${encodeURIComponent(selectedAccount)}` // Pridanie nového account parametra
             ];
 
+            // 5. Pridanie category alebo subcategory na základe výberu
+            if (selectedCategoryData.type === 'category') {
+                // Príklad: category=Gas
+                params.push(`category=${encodeURIComponent(selectedCategoryData.value)}`);
+            } else if (selectedCategoryData.type === 'subcategory') {
+                // Ak je to subkategória (napr. Lidl), predpokladáme nadradenú kategóriu 'Shopping' 
+                // a pridáme obe parametre.
+                params.push(`category=${encodeURIComponent('Shopping')}`); 
+                params.push(`subcategory=${encodeURIComponent(selectedCategoryData.value)}`);
+            }
+
+            // Vrátenie kompletnej URI (so správne kódovanými medzerami ako %20)
             return `${DEEP_LINK_SCHEME}?${params.join('&')}`;
         }
 
@@ -338,6 +430,10 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
 
         // Spustenie aplikácie po načítaní okna
         window.onload = function() {
+            // Najprv naplníme dropdown menu, aby boli pripravené
+            populateDropdowns(); 
+            
+            // Až potom spustíme skener
             startScanner();
 
             // Nastavenie tlačidla pre reset skenovania
