@@ -1,17 +1,18 @@
 // Názov cache a verzia. Zmeňte verziu, keď chcete aktualizovať cachované súbory.
 const CACHE_NAME = 'cashew-skener-cache-v1';
+const BASE_PATH = '/qr-ekasa-skener/';
 
 // Zoznam súborov, ktoré sa majú predcachovať počas inštalácie
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  BASE_PATH,
+  `${BASE_PATH}index.html`,
+  `${BASE_PATH}manifest.json`,
   // Externé knižnice
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
   'https://unpkg.com/html5-qrcode',
   // Ikonky (ak ich máte podľa manifestu)
-  '/icons/icon-192x192.png',
+  `${BASE_PATH}icons/icon-144x144.png`,
   // Pridajte ďalšie assety (fonty, obrázky, atď.)
 ];
 
