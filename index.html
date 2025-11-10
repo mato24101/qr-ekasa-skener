@@ -226,6 +226,7 @@
                 `title=${encodeURIComponent(title)}`,
                 `notes=${encodeURIComponent(notes)}`,
                 `account=${encodeURIComponent(selectedAccount)}` // Pridanie nového account parametra
+                `date=${encodeURIComponent(issueDate)}`
             ];
 
             // 5. Pridanie category alebo subcategory na základe výberu
@@ -235,7 +236,7 @@
             } else if (selectedCategoryData.type === 'subcategory') {
                 // Ak je to subkategória (napr. Lidl), predpokladáme nadradenú kategóriu 'Shopping' 
                 // a pridáme obe parametre.
-                params.push(`category=${encodeURIComponent('Shopping')}`); 
+                // params.push(`category=${encodeURIComponent('Shopping')}`); 
                 params.push(`subcategory=${encodeURIComponent(selectedCategoryData.value)}`);
             }
 
