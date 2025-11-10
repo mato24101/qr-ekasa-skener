@@ -1,8 +1,8 @@
 {
   "name": "Cashew Bločko Skener",
-  "short_name": "Cashew Skener",
+  "short_name": "Cashew Scan",
   "description": "Naskenujte eKasa QR kód a vygenerujte transakčný link pre Cashew App.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
