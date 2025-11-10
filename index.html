@@ -35,7 +35,7 @@
             Bločko skener
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Naskenuj eKasa QR kód a vygeneruje si link pre Cashew App. už
+            Naskenuj eKasa QR kód a vygeneruje si link pre Cashew App.
         </p>
 
         <div class="flex flex-col md:flex-row gap-8">
@@ -90,7 +90,7 @@
                         <span class="text-gray-400">Deeplink sa vygeneruje po úspešnom spracovaní.</span>
                     </div>
                     <a id="open-deeplink-button" href="#" target="_blank" class="block text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md">
-                        Otvoriť v aplikácii Cashew (Vyskúšať)
+                        Import to Cashew (Vyskúšať)
                     </a>
                 </div>
 
@@ -136,8 +136,9 @@
 
         // Hardcoded účty pre dropdown
         const ACCOUNTS = [
-            '365', // Predvolený účet by mal byť hore
-            'Xtb',
+            'Xtb', // Predvolený účet by mal byť hore
+            '365',
+            'Cash'
         ];
 
 
@@ -440,15 +441,31 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
             // Až potom spustíme skener
             startScanner();
 
-            // Nastavenie tlačidla pre reset skenovania
-            document.getElementById('reset-button').addEventListener('click', () => {
-                if (html5QrcodeScanner) {
-                    try {
-                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
-                    } catch (e) {
-                        // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
-                    }
-                }
+            // ÚPRAVA: Nastavenie tlačidla pre otvorenie Deep Linku
+            document.getElementById('open-deeplink-button').addEventListener('click', (event) => {
+                // Reštartovanie skenera sa vykoná po kliknutí na deeplink
+                
+                // Ak používate PWA, mobilný prehliadač sa prepne do Cashew a nemusí sa vrátiť hneď.
+                // Čistenie a spustenie skenera by malo prebehnúť bez ohľadu na to.
+                
+                // Najprv sa uistíme, že je skener zastavený
+                if (html5QrcodeScanner) {
+                    try {
+                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť po Deeplinku:", e));
+                    } catch (e) {
+                        // Ignorujeme
+                    }
+                }
+
+            // // Nastavenie tlačidla pre reset skenovania
+            // document.getElementById('reset-button').addEventListener('click', () => {
+            //     if (html5QrcodeScanner) {
+            //         try {
+            //             html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
+            //         } catch (e) {
+            //             // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
+            //         }
+            //     }
                 
                 // Vyčistíme div pre skener a znova ho spustíme
                 document.getElementById('reader').innerHTML = '';
