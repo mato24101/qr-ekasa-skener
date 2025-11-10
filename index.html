@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Kód Skener a Spracovanie Dát</title>
+    <!-- Načítanie Tailwind CSS pre štýlovanie -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Načítanie fontu Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Načítanie knižnice html5-qrcode pre skenovanie -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .scanner-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        /* Štýlovanie pre oblasť skenovania */
+        #reader > div:first-child {
+            border-radius: 0.75rem !important; /* rounder-xl */
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border border-gray-100">
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2 text-center">
+            QR Skener a Spracovanie Dát (eKasa API)
+        </h1>
+        <p class="text-center text-gray-500 mb-8">
+            Naskenujte eKasa KB kód a vygenerujte transakčný link pre Cashew App.
+        </p>
+
+        <!-- Hlavný layout - skener a výsledky vedľa seba na desktope -->
+        <div class="flex flex-col md:flex-row gap-8">
+            
+            <!-- Stĺpec skenera -->
+            <div class="md:w-1/2 scanner-container">
+                <div id="reader" class="rounded-xl shadow-lg border-4 border-indigo-200"></div>
+                <!-- Priestor pre zobrazenie chýb kamery -->
+                <div id="camera-error" class="mt-4 text-center p-3 rounded-lg text-red-700 bg-red-100 font-semibold hidden"></div>
+            </div>
+
+            <!-- Stĺpec výsledkov -->
+            <div class="md:w-1/2 flex flex-col gap-6">
+                
+                <!-- Sekcia 1: Surový obsah QR kódu -->
+                <div class="bg-indigo-50 p-5 rounded-lg border border-indigo-200 shadow-inner">
+                    <h2 class="text-xl font-bold text-indigo-800 mb-2">1. KB Kód (Vstup)</h2>
+                    <p class="text-sm text-indigo-600 mb-3">Surové dáta extrahované skenerom:</p>
+                    <div id="qr-content" class="bg-white p-3 min-h-[4rem] rounded-md border border-indigo-300 font-mono text-gray-800 break-all flex items-center justify-center text-center text-sm">
+                        <span class="text-gray-400">Čakám na sken...</span>
+                    </div>
+                </div>
+
+                <!-- Sekcia 2: Výsledok API volania -->
+                <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-inner">
+                    <h2 class="text-xl font-bold text-emerald-800 mb-2">2. Výsledky Spracovania (API volanie)</h2>
+                    <p class="text-sm text-emerald-600 mb-3">
+                        Dáta boli odoslané na API Finančnej správy a bol získaný výstup.
+                    </p>
+                    <div id="python-output" class="bg-white p-3 min-h-[6rem] rounded-md border border-emerald-300 whitespace-pre-wrap text-gray-800 text-sm">
+                        <span class="text-gray-400">Výsledok API volania.</span>
+                    </div>
+                </div>
+
+                <!-- Sekcia 3: Deep Link -->
+                <div id="deeplink-card" class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner hidden">
+                    <h2 class="text-xl font-bold text-blue-800 mb-2">3. Generovaný Cashew Link (HTTPS)</h2>
+                    <p class="text-sm text-blue-600 mb-3">
+                        HTTPS URI vytvorená pre mobilnú aplikáciu Cashew s parametrami pre transakciu:
+                    </p>
+                    <div id="deeplink-output" class="bg-white p-3 rounded-md border border-blue-300 font-mono text-xs text-gray-800 break-all mb-4">
+                        <span class="text-gray-400">Deeplink sa vygeneruje po úspešnom spracovaní.</span>
+                    </div>
+                    <a id="open-deeplink-button" href="#" target="_blank" class="block text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md">
+                        Otvoriť v aplikácii Cashew (Vyskúšať)
+                    </a>
+                </div>
+
+                <button id="reset-button" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md">
+                    Spustiť nové skenovanie / Reštartovať Kameru
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Globálne premenné pre Firebase (použité len na inicializáciu)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Konštanta pre Cashew App Link URI (Aktualizované na HTTPS transakčný endpoint)
+        const DEEP_LINK_SCHEME = "https://cashewapp.web.app/addTransaction";
+
+        /**
+         * Odstráni diakritiku (mäkčene a dĺžne) zo slovenského textu.
+         * @param {string} text Vstupný text.
+         * @returns {string} Text bez diakritiky.
+         */
+        function removeDiacritics(text) {
+            if (!text) return '';
+            // Normalizácia NFKD a odstránenie diakritických značiek
+            const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return normalized;
+        }
+
+        /**
+         * Generuje Cashew transakčný link na základe získaných dát.
+         * Štruktúra: https://cashewapp.web.app/addTransaction?amount=-<PRICE>&title=<SHOP_NAME_NO_DIACRITICS>&category=Shopping&notes=<NOTES>
+         * @param {string} kb_code Kód bločku.
+         * @param {string} issueDate Dátum vystavenia.
+         * @param {string} shopName Názov predajne.
+         * @param {string} totalPrice Celková cena.
+         * @returns {string} Generovaný Deep Link URI.
+         */
+        function generateDeepLink(kb_code, issueDate, shopName, totalPrice) {
+            
+            // 1. Spracovanie názvu (bez diakritiky)
+            const title = removeDiacritics(shopName);
+
+            // 2. Spracovanie sumy (záporná hodnota pre výdavok)
+            // Nahradíme čiarku za bodku pre správny desatinný formát a pridáme mínus
+            const amount = "-" + String(totalPrice).replace(',', '.'); 
+            
+            // 3. Vytvorenie poznámky
+            const notes = `eKasa Blok ID: ${kb_code} | Dátum: ${issueDate}`; 
+
+            // 4. Vytvorenie parametrov (URLSearchParams automaticky používa percent-encoding, napr. %20 pre medzery)
+            const params = new URLSearchParams({
+                amount: amount,
+                title: title,
+                category: "Shopping", // Požadovaná pevná hodnota
+                notes: notes 
+            });
+
+            return `${DEEP_LINK_SCHEME}?${params.toString()}`;
+        }
+
+        /**
+         * Funkcia, ktorá vykonáva asynchrónne volanie na API Finančnej správy.
+         * @param {string} kb_code Kód bločku z QR kódu (KB kód).
+         * @returns {Promise<{issueDate: string, shopName: string, totalPrice: string} | null>} Získané dáta.
+         */
+        async function fetchReceiptData(kb_code) {
+            const url = "https://ekasa.financnasprava.sk/mdu/api/v1/opd/receipt/find";
+            const payload = { "receiptId": kb_code };
+            const headers = {
+                "Content-Type": "application/json;charset=UTF-8",
+                "Accept": "application/json, text/plain, */*",
+                "Origin": "https://opd.financnasprava.sk",
+                "Referer": "https://opd.financnasprava.sk/",
+                "User-Agent": navigator.userAgent 
+            };
+
+            const outputElement = document.getElementById('python-output');
+            
+            // Indikátor načítania
+            outputElement.textContent = 'Načítavam dáta z Finančnej správy (API volanie)...';
+            outputElement.classList.remove('text-gray-800', 'text-red-700', 'font-mono');
+            outputElement.classList.add('text-yellow-600', 'animate-pulse');
+
+            try {
+                // Implementácia exponenciálneho backoffu (max 3 pokusy)
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify(payload),
+                            signal: AbortSignal.timeout(10000) // Timeout 10 sekúnd
+                        });
+
+                        // 429 Too Many Requests -> skúsime znova s oneskorením
+                        if (response.status === 429 && attempt < 2) { 
+                            const delay = Math.pow(2, attempt) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(`Chyba pri HTTP požiadavke. Status kód: ${response.status} ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data.returnValue === 0 && data.receipt && data.receipt.organization && data.receipt.items) {
+                            
+                            const issueDate = data.receipt.issueDate || 'N/A';
+                            const shopName = data.receipt.organization.name || 'N/A';
+                            const totalPrice = data.receipt.totalPrice || 'N/A';
+
+                            const resultText = `
+Dáta z QR kódu (KB kód): ${kb_code}
+
+--- VÝSLEDOK API VOLANIA ---
+Dátum vystavenia (issueDate): ${issueDate}
+Názov predajne (sellerName): ${shopName}
+Celková cena (totalPrice): ${totalPrice}
+                            `.trim();
+
+                            outputElement.textContent = resultText;
+                            outputElement.classList.remove('text-yellow-600', 'animate-pulse');
+                            outputElement.classList.add('font-mono', 'text-sm', 'text-gray-800');
+                            return { issueDate, shopName, totalPrice };
+                        } else {
+                            const errorText = `
+CHYBA PRI DÁTACH:
+Finančná správa vrátila neplatnú odpoveď alebo bloček nebol nájdený.
+Návratová hodnota: ${data.returnValue}
+Správa: ${data.returnMessage || 'Neznáma chyba'}
+                            `.trim();
+                            outputElement.textContent = errorText;
+                            outputElement.classList.remove('text-yellow-600', 'animate-pulse');
+                            outputElement.classList.add('text-red-700', 'font-mono', 'text-sm');
+                            return null;
+                        }
+                    } catch (e) {
+                        if (e.name === 'AbortError') {
+                            throw new Error("Vypršal časový limit (10s) pre API volanie.");
+                        }
+                        if (attempt === 2) throw e; 
+                        const delay = Math.pow(2, attempt) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+
+            } catch (e) {
+                const errorText = `
+CHYBA PRI VOLANÍ API:
+Nepodarilo sa pripojiť k serveru alebo: ${e.message}
+                `.trim();
+                outputElement.textContent = errorText;
+                outputElement.classList.remove('text-yellow-600', 'animate-pulse');
+                outputElement.classList.add('text-red-700', 'font-mono', 'text-sm');
+                console.error("Fetch Error:", e);
+                return null;
+            }
+        }
+
+        let html5QrcodeScanner;
+
+        /**
+         * Funkcia volaná po úspešnom skenovaní QR kódu.
+         * @param {string} decodedText Obsah QR kódu.
+         */
+        async function onScanSuccess(decodedText, decodedResult) {
+            
+            if (html5QrcodeScanner) {
+                try {
+                    // Krok 1: Bezpečne ukončíme skener
+                    await html5QrcodeScanner.clear();
+
+                    document.getElementById('qr-content').textContent = decodedText;
+                    document.getElementById('qr-content').classList.remove('text-gray-400');
+                    
+                    // Krok 2: Odoslanie dát na spracovanie cez API
+                    const result = await fetchReceiptData(decodedText);
+
+                    // Krok 3: Generovanie Deep Link
+                    const deeplinkCard = document.getElementById('deeplink-card');
+                    const deeplinkOutput = document.getElementById('deeplink-output');
+                    const deeplinkButton = document.getElementById('open-deeplink-button');
+
+                    if (result) {
+                        // Použijeme získané dáta na vytvorenie Deep Linku
+                        const deeplink = generateDeepLink(decodedText, result.issueDate, result.shopName, result.totalPrice);
+                        
+                        deeplinkOutput.textContent = deeplink;
+                        deeplinkButton.href = deeplink;
+                        deeplinkCard.classList.remove('hidden'); 
+                    } else {
+                        deeplinkCard.classList.add('hidden'); 
+                        deeplinkOutput.textContent = 'Deeplink nebol vygenerovaný kvôli chybe pri získavaní dát.';
+                    }
+
+                } catch(err) {
+                    console.error("Chyba po skenovaní/pri API volaní: ", err);
+                    document.getElementById('camera-error').textContent = `CHYBA: Nepodarilo sa spracovať sken. ${err.message}`;
+                    document.getElementById('camera-error').classList.remove('hidden');
+                }
+            }
+        }
+
+        /**
+         * Funkcia volaná v prípade chyby skenovania/spustenia kamery.
+         * @param {any} errorMessage Popis chyby.
+         */
+        function onScanFailure(errorMessage) {
+             const errorElement = document.getElementById('camera-error');
+             const errorString = String(errorMessage); 
+
+             if (!errorString.includes('No MultiFormat Readers')) {
+                 console.warn(`QR skenovanie zlyhalo: ${errorString}`);
+             }
+
+             if (errorString.includes("NotAllowedError") || errorString.includes("NotFoundError")) {
+                 errorElement.textContent = "CHYBA: Kamera nespustená. Skontrolujte, či ste povolili prístup ku kamere a či ju neblokuje iná aplikácia.";
+                 errorElement.classList.remove('hidden');
+             } else {
+                 errorElement.classList.add('hidden');
+             }
+        }
+        
+        /**
+         * Inicializácia a spustenie skenera.
+         */
+        function startScanner() {
+            // Vyčistenie predchádzajúcich výsledkov
+            document.getElementById('qr-content').textContent = 'Čakám na sken...';
+            document.getElementById('qr-content').classList.add('text-gray-400');
+            document.getElementById('python-output').textContent = 'Výsledok API volania.';
+            document.getElementById('python-output').classList.add('text-gray-400');
+            document.getElementById('deeplink-output').textContent = 'Deeplink sa vygeneruje po úspešnom spracovaní.';
+            document.getElementById('deeplink-card').classList.add('hidden'); 
+            document.getElementById('camera-error').classList.add('hidden');
+
+            // Vytvorenie inštancie skenera
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { 
+                    fps: 15,
+                    qrbox: { width: 200, height: 200 },
+                    rememberLastUsedCamera: true,
+                    disableFlip: false 
+                },
+                /* verbose= */ false
+            );
+            
+            // Spustenie skenera
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        // Spustenie aplikácie po načítaní okna
+        window.onload = function() {
+            startScanner();
+
+            // Nastavenie tlačidla pre reset skenovania
+            document.getElementById('reset-button').addEventListener('click', () => {
+                if (html5QrcodeScanner) {
+                    try {
+                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
+                    } catch (e) {
+                         // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
+                    }
+                }
+                
+                // Vyčistíme div pre skener a znova ho spustíme
+                document.getElementById('reader').innerHTML = '';
+                startScanner();
+            });
+        };
+
+    </script>
+</body>
+</html>
