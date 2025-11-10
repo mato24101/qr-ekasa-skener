@@ -159,7 +159,7 @@
             }
             
             // Predvolene nastavíme 'Nakup (Shopping)'
-            categorySelect.querySelector(`[value*='"Shopping"'][value*='"category"']`).selected = true;
+            categorySelect.querySelector(`[value*='"Groceries"'][value*='"category"']`).selected = true;
 
 
             // 2. Naplnenie Účtov
@@ -441,31 +441,32 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
             // Až potom spustíme skener
             startScanner();
 
-            // ÚPRAVA: Nastavenie tlačidla pre otvorenie Deep Linku
-            document.getElementById('open-deeplink-button').addEventListener('click', (event) => {
-                // Reštartovanie skenera sa vykoná po kliknutí na deeplink
-                
-                // Ak používate PWA, mobilný prehliadač sa prepne do Cashew a nemusí sa vrátiť hneď.
-                // Čistenie a spustenie skenera by malo prebehnúť bez ohľadu na to.
-                
-                // Najprv sa uistíme, že je skener zastavený
-                if (html5QrcodeScanner) {
-                    try {
-                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť po Deeplinku:", e));
-                    } catch (e) {
-                        // Ignorujeme
-                    }
-                }
+            // ⭐ NOVÁ LOGIKA: Reštart skenera po kliknutí na Deeplink
+            document.getElementById('open-deeplink-button').addEventListener('click', () => {
+                // Skener je už zvyčajne zastavený funkciou onScanSuccess, ale pre istotu ho reštartujeme/vyčistíme
+                if (html5QrcodeScanner) {
+                    try {
+                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť po Deeplinku:", e));
+                    } catch (e) {
+                        // Ignorujeme
+                    }
+                }
+                
+                // Vyčistíme div pre skener a znova ho spustíme
+                document.getElementById('reader').innerHTML = '';
+                startScanner();
+            });
 
-            // // Nastavenie tlačidla pre reset skenovania
-            // document.getElementById('reset-button').addEventListener('click', () => {
-            //     if (html5QrcodeScanner) {
-            //         try {
-            //             html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
-            //         } catch (e) {
-            //             // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
-            //         }
-            //     }
+
+            // Nastavenie tlačidla pre reset skenovania (zostáva pôvodné)
+            document.getElementById('reset-button').addEventListener('click', () => {
+                if (html5QrcodeScanner) {
+                    try {
+                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
+                    } catch (e) {
+                        // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
+                    }
+                }
                 
                 // Vyčistíme div pre skener a znova ho spustíme
                 document.getElementById('reader').innerHTML = '';
