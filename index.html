@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Skener a Spracovanie Dát</title>
-    <!-- Načítanie Tailwind CSS pre štýlovanie -->
+    <title>QR Kód Skener a Spracovanie Dát (PWA)</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    
+    <meta name="theme-color" content="#4f46e5"> 
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Načítanie fontu Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Načítanie knižnice html5-qrcode pre skenovanie -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -34,20 +36,15 @@
             Naskenujte eKasa QR kód a vygeneruje si link pre Cashew App.
         </p>
 
-        <!-- Hlavný layout - skener a výsledky vedľa seba na desktope -->
         <div class="flex flex-col md:flex-row gap-8">
             
-            <!-- Stĺpec skenera -->
             <div class="md:w-1/2 scanner-container">
                 <div id="reader" class="rounded-xl shadow-lg border-4 border-indigo-200"></div>
-                <!-- Priestor pre zobrazenie chýb kamery -->
                 <div id="camera-error" class="mt-4 text-center p-3 rounded-lg text-red-700 bg-red-100 font-semibold hidden"></div>
             </div>
 
-            <!-- Stĺpec výsledkov a nastavení -->
             <div class="md:w-1/2 flex flex-col gap-6">
                 
-                <!-- Sekcia 1: Surový obsah QR kódu -->
                 <div class="bg-indigo-50 p-5 rounded-lg border border-indigo-200 shadow-inner hidden">
                     <h2 class="text-xl font-bold text-indigo-800 mb-2">1. KB Kód (Vstup)</h2>
                     <p class="text-sm text-indigo-600 mb-3">Surové dáta extrahované skenerom:</p>
@@ -56,7 +53,6 @@
                     </div>
                 </div>
 
-                <!-- Sekcia 2: Výsledok API volania -->
                 <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-inner hidden">
                     <h2 class="text-xl font-bold text-emerald-800 mb-2">2. Výsledky Spracovania (API volanie)</h2>
                     <p class="text-sm text-emerald-600 mb-3">
@@ -67,28 +63,22 @@
                     </div>
                 </div>
 
-                <!-- Sekcia 2.5: Používateľský Vstup (Kategória a Účet) -->
                 <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-inner">
                     <h2 class="text-xl font-bold text-yellow-800 mb-4">Nastavenia Transakcie</h2>
                     
-                    <!-- Výber Kategórie/Podkategórie -->
                     <div class="mb-4">
                         <label for="category-select" class="block text-sm font-medium text-yellow-700 mb-1">Kategória / Subkategória:</label>
                         <select id="category-select" class="w-full p-2 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 transition duration-150 shadow-sm text-gray-800">
-                            <!-- Možnosti budú dynamicky naplnené JS -->
-                        </select>
+                            </select>
                     </div>
 
-                    <!-- Výber Účtu -->
                     <div>
                         <label for="account-select" class="block text-sm font-medium text-yellow-700 mb-1">Účet (Account):</label>
                         <select id="account-select" class="w-full p-2 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 transition duration-150 shadow-sm text-gray-800">
-                            <!-- Možnosti budú dynamicky naplnené JS -->
-                        </select>
+                            </select>
                     </div>
                 </div>
 
-                <!-- Sekcia 3: Deep Link -->
                 <div id="deeplink-card" class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner hidden">
                     <h2 class="text-xl font-bold text-blue-800 mb-2">3. Generovaný Cashew Link (HTTPS)</h2>
                     <p class="text-sm text-blue-600 mb-3">
@@ -110,6 +100,8 @@
     </div>
 
     <script type="module">
+        // [Váš existujúci Javascript kód (bez zmeny, okrem pridania registrácie Service Workera)]
+
         // Globálne premenné pre Firebase (použité len na inicializáciu)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -452,7 +444,7 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                     try {
                         html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
                     } catch (e) {
-                         // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
+                        // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
                     }
                 }
                 
@@ -460,6 +452,20 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                 document.getElementById('reader').innerHTML = '';
                 startScanner();
             });
+
+            // *** PWA: REGISTRÁCIA SERVICE WORKERA ***
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js')
+                        .then(registration => {
+                            console.log('ServiceWorker zaregistrovaný: ', registration.scope);
+                        })
+                        .catch(err => {
+                            console.log('Registrácia ServiceWorkera zlyhala: ', err);
+                        });
+                });
+            }
+
         };
 
     </script>
