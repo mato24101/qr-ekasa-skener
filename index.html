@@ -130,15 +130,16 @@
             // 3. Vytvorenie poznámky
             const notes = `eKasa Blok ID: ${kb_code} | Dátum: ${issueDate}`; 
 
-            // 4. Vytvorenie parametrov (URLSearchParams automaticky používa percent-encoding, napr. %20 pre medzery)
-            const params = new URLSearchParams({
-                amount: amount,
-                title: title,
-                category: "Shopping", // Požadovaná pevná hodnota
-                notes: notes 
-            });
+            // 4. Manuálna konštrukcia parametrov s encodeURIComponent
+            // Tým sa zabezpečí, že medzery budú kódované ako %20 (namiesto +)
+            const params = [
+                `amount=${encodeURIComponent(amount)}`,
+                `title=${encodeURIComponent(title)}`,
+                `category=${encodeURIComponent("Shopping")}`, // Požadovaná pevná hodnota
+                `notes=${encodeURIComponent(notes)}`
+            ];
 
-            return `${DEEP_LINK_SCHEME}?${params.toString()}`;
+            return `${DEEP_LINK_SCHEME}?${params.join('&')}`;
         }
 
         /**
