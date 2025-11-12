@@ -339,7 +339,7 @@
                             // *** KĽÚČOVÁ ZMENA: Extrahovanie položiek ***
                             const items = data.receipt.items.map(item => ({
                                 itemName: item.name,
-                                totalPrice: item.totalPrice // cena položky (string/number)
+                                totalPrice: item.price // cena položky (string/number)
                             }));
 
                             // --- NOVÁ ČASŤ: Formátovanie položiek pre výpis ---
