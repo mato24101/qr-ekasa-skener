@@ -30,12 +30,12 @@
 </head>
 <body class="bg-gray-50 min-h-screen p-4 sm:p-8">
 
-    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border border-gray-100">
+    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border border-gray-100">
         <h1 class="text-3xl font-extrabold text-indigo-700 mb-2 text-center">
             Bločko skener
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Naskenuj eKasa QR kód a vygeneruje si link pre Cashew App.
+            Naskenuj eKasa QR kód alebo zadaj KB kód ručne a vygeneruje si link pre Cashew App.
         </p>
 
         <div class="flex flex-col md:flex-row gap-8">
@@ -47,16 +47,30 @@
 
             <div class="md:w-1/2 flex flex-col gap-6">
                 
-                <div class="bg-indigo-50 p-5 rounded-lg border border-indigo-200 shadow-inner hidden">
-                    <h2 class="text-xl font-bold text-indigo-800 mb-2">1. KB Kód (Vstup)</h2>
-                    <p class="text-sm text-indigo-600 mb-3">Surové dáta extrahované skenerom:</p>
+                <!-- NEW: Manuálne zadanie KB kódu -->
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner">
+                    <h2 class="text-xl font-bold text-blue-800 mb-2">1. Manuálne Zadanie KB Kódu</h2>
+                    <p class="text-sm text-blue-600 mb-3">
+                        Zadajte eKasa KB kód ručne, ak sa QR kód nedá naskenovať.
+                    </p>
+                    <input type="text" id="kb-input" placeholder="Zadajte 18-miestny KB kód..." class="w-full p-2 border border-blue-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 shadow-sm text-gray-800 mb-4"/>
+                    <button id="submit-kb-button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md">
+                        Spracovať kód
+                    </button>
+                </div>
+                
+                <!-- Pôvodný KB Kód (zobrazenie) -->
+                <div id="qr-content-card" class="bg-indigo-50 p-5 rounded-lg border border-indigo-200 shadow-inner hidden">
+                    <h2 class="text-xl font-bold text-indigo-800 mb-2">2. KB Kód (Vstup)</h2>
+                    <p class="text-sm text-indigo-600 mb-3">Surové dáta extrahované skenerom / zadané ručne:</p>
                     <div id="qr-content" class="bg-white p-3 min-h-[4rem] rounded-md border border-indigo-300 font-mono text-gray-800 break-all flex items-center justify-center text-center text-sm">
                         <span class="text-gray-400">Čakám na sken...</span>
                     </div>
                 </div>
 
-                <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-inner hidden">
-                    <h2 class="text-xl font-bold text-emerald-800 mb-2">2. Výsledky Spracovania (API volanie)</h2>
+                <!-- API Finančnej správy -->
+                <div id="api-output-card" class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-inner hidden">
+                    <h2 class="text-xl font-bold text-emerald-800 mb-2">3. Výsledky Spracovania (API volanie)</h2>
                     <p class="text-sm text-emerald-600 mb-3">
                         Dáta boli odoslané na API Finančnej správy a bol získaný výstup.
                     </p>
@@ -65,6 +79,19 @@
                     </div>
                 </div>
 
+                <!-- NEW: Gemini AI Categorization -->
+                <div id="gemini-output-card" class="bg-purple-50 p-5 rounded-lg border border-purple-200 shadow-inner hidden">
+                    <h2 class="text-xl font-bold text-purple-800 mb-2">4. Gemini AI Kategorizácia (JSON)</h2>
+                    <p class="text-sm text-purple-600 mb-3">
+                        Položky bločku roztriedené AI do kategórií s celkovými súčtami:
+                    </p>
+                    <div id="gemini-output" class="bg-white p-3 min-h-[6rem] rounded-md border border-purple-300 whitespace-pre-wrap text-gray-800 text-xs font-mono overflow-auto max-h-60">
+                        <span class="text-gray-400">Výsledok kategorizácie AI.</span>
+                    </div>
+                </div>
+
+
+                <!-- Pôvodné Nastavenia Transakcie -->
                 <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-inner">
                     <h2 class="text-xl font-bold text-yellow-800 mb-4">Nastavenia Transakcie</h2>
                     
@@ -81,8 +108,9 @@
                     </div>
                 </div>
 
+                <!-- Pôvodný Deeplink Card -->
                 <div id="deeplink-card" class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner hidden">
-                    <h2 class="text-xl font-bold text-blue-800 mb-2">3. Generovaný Cashew Link (HTTPS)</h2>
+                    <h2 class="text-xl font-bold text-blue-800 mb-2">5. Generovaný Cashew Link (HTTPS)</h2>
                     <p class="text-sm text-blue-600 mb-3">
                         HTTPS URI vytvorená pre mobilnú aplikáciu Cashew s parametrami pre transakciu:
                     </p>
@@ -95,15 +123,14 @@
                 </div>
 
                 <button id="reset-button" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md">
-                    Spustiť nové skenovanie / Reštartovať Kameru
+                    Spustiť nové skenovanie / Reštartovať
                 </button>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // [Váš existujúci Javascript kód (bez zmeny, okrem pridania registrácie Service Workera)]
-
+        
         // Globálne premenné pre Firebase (použité len na inicializáciu)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -111,28 +138,36 @@
         
         // Konštanta pre Cashew App Link URI (Aktualizované na HTTPS transakčný endpoint)
         const DEEP_LINK_SCHEME = "https://cashewapp.web.app/addTransaction";
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=";
+        const API_KEY = ""; // Bude automaticky vyplnené v Canvas prostredí
 
         // Hardcoded kategórie/subkategórie pre dropdown
         const CATEGORY_MAP = {
-            'Jedlo': { type: 'category', value: 'Groceries' },
-            'Obed': { type: 'subcategory', value: 'Lunch' },
+            'Jedlo (Groceries)': { type: 'category', value: 'Groceries' },
+            'Obed (Lunch)': { type: 'subcategory', value: 'Lunch' },
             'Fastfood': { type: 'subcategory', value: 'Fastfood' },
-            'Reštaurácia': { type: 'category', value: 'Dining' },
-            'Nákup (nezardené)': { type: 'category', value: 'Shopping' },
+            'Reštaurácia (Dining)': { type: 'category', value: 'Dining' },
+            'Nákup (Shopping)': { type: 'category', value: 'Shopping' },
             'Vylepšenie domácnosti': { type: 'subcategory', value: 'Home improvements' },
             'Nábytok': { type: 'subcategory', value: 'Furniture' },
             'Oblečenie': { type: 'subcategory', value: 'Clothing' },
             'Elektronika': { type: 'subcategory', value: 'Electonics' },
             'Drogéria': { type: 'subcategory', value: 'Drugstore' },
+            'Hračky': { type: 'subcategory', value: 'Toys' },
             'Tankovanie': { type: 'subcategory', value: 'Gas' },
-            'Zvieratká': { type: 'category', value: 'Pets' },
-            'Zábava': { type: 'category', value: 'Enterteinment' },
-            'Darčeky': { type: 'category', value: 'Gifts' },
-            'Krása': { type: 'category', value: 'Beauty' },
+            'Zvieratká (Pets)': { type: 'category', value: 'Pets' },
+            'Zábava (Enterteinment)': { type: 'category', value: 'Enterteinment' },
+            'Darčeky (Gifts)': { type: 'category', value: 'Gifts' },
+            'Krása (Beauty)': { type: 'category', value: 'Beauty' },
             'Lieky': { type: 'subcategory', value: 'Medicine' },
             'Zubár': { type: 'subcategory', value: 'Dentist' },
-            'Lekár': { type: 'category', value: 'Health' },
+            'Lekár (Health)': { type: 'category', value: 'Health' },
         };
+
+        // Zjednodušené kategórie pre Gemini LLM
+        const GEMINI_CATEGORIES = [
+            'Groceries', 'Dining', 'Shopping', 'Health', 'Pets', 'Enterteinment', 'Gifts', 'Beauty', 'Uncategorized'
+        ];
 
         // Hardcoded účty pre dropdown
         const ACCOUNTS = [
@@ -159,7 +194,10 @@
             }
             
             // Predvolene nastavíme 'Nakup (Shopping)'
-            categorySelect.querySelector(`[value*='"Groceries"'][value*='"category"']`).selected = true;
+            const defaultOption = categorySelect.querySelector(`[value*='"Groceries"'][value*='"category"']`) || categorySelect.options[0];
+            if (defaultOption) {
+                defaultOption.selected = true;
+            }
 
 
             // 2. Naplnenie Účtov
@@ -226,12 +264,10 @@
 
             // 5. Pridanie category alebo subcategory na základe výberu
             if (selectedCategoryData.type === 'category') {
-                // Príklad: category=Gas
+                // Príklad: category=Groceries
                 params.push(`category=${encodeURIComponent(selectedCategoryData.value)}`);
             } else if (selectedCategoryData.type === 'subcategory') {
-                // Ak je to subkategória (napr. Lidl), predpokladáme nadradenú kategóriu 'Shopping' 
-                // a pridáme obe parametre.
-                // params.push(`category=${encodeURIComponent('Shopping')}`); 
+                // Pridáme len subcategory parameter
                 params.push(`subcategory=${encodeURIComponent(selectedCategoryData.value)}`);
             }
 
@@ -242,7 +278,7 @@
         /**
          * Funkcia, ktorá vykonáva asynchrónne volanie na API Finančnej správy.
          * @param {string} kb_code Kód bločku z QR kódu (KB kód).
-         * @returns {Promise<{issueDate: string, shopName: string, totalPrice: string} | null>} Získané dáta.
+         * @returns {Promise<{issueDate: string, shopName: string, totalPrice: string, items: Array<{itemName: string, totalPrice: string}>} | null>} Získané dáta.
          */
         async function fetchReceiptData(kb_code) {
             const url = "https://ekasa.financnasprava.sk/mdu/api/v1/opd/receipt/find";
@@ -291,20 +327,36 @@
                             const issueDate = data.receipt.issueDate || 'N/A';
                             const shopName = data.receipt.organization.name || 'N/A';
                             const totalPrice = data.receipt.totalPrice || 'N/A';
+                            
+                            // *** KĽÚČOVÁ ZMENA: Extrahovanie položiek ***
+                            const items = data.receipt.items.map(item => ({
+                                itemName: item.name,
+                                totalPrice: item.price // cena položky (string/number)
+                            }));
+                            
+                            const formattedItems = items.map(item => 
+                                `${item.itemName}: ${item.totalPrice} EUR`
+                            ).join('\n  '); // Indent pre lepšiu čitateľnosť
+
 
                             const resultText = `
-Dáta z QR kódu (KB kód): ${kb_code}
+                            Dáta z QR kódu (KB kód): ${kb_code}
 
 --- VÝSLEDOK API VOLANIA ---
 Dátum vystavenia (issueDate): ${issueDate}
 Názov predajne (sellerName): ${shopName}
 Celková cena (totalPrice): ${totalPrice}
+Počet položiek: ${items.length}
+Položky bločku:
+  ${formattedItems}
                             `.trim();
 
                             outputElement.textContent = resultText;
                             outputElement.classList.remove('text-yellow-600', 'animate-pulse');
                             outputElement.classList.add('font-mono', 'text-sm', 'text-gray-800');
-                            return { issueDate, shopName, totalPrice };
+
+                            // Vrátime aj items
+                            return { issueDate, shopName, totalPrice, items };
                         } else {
                             const errorText = `
 CHYBA PRI DÁTACH:
@@ -340,47 +392,215 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
             }
         }
 
+
+        /**
+         * Volá Gemini API na kategorizáciu položiek bločku.
+         * @param {Array<{itemName: string, totalPrice: string}>} items Zoznam položiek bločku.
+         * @returns {Promise<Object | null>} Kategorizované dáta alebo null pri chybe.
+         */
+        async function callGeminiCategorization(items) {
+            const outputElement = document.getElementById('gemini-output');
+            const geminiCard = document.getElementById('gemini-output-card');
+            
+            geminiCard.classList.remove('hidden');
+            outputElement.textContent = 'Volám Gemini AI na kategorizáciu (generovanie JSON)...';
+            outputElement.classList.remove('text-gray-800', 'text-red-700', 'font-mono');
+            outputElement.classList.add('text-purple-600', 'animate-pulse');
+
+            const itemText = items.map(item => `- ${item.itemName} (${item.totalPrice} EUR)`).join('\n');
+            const categoriesText = GEMINI_CATEGORIES.join(', ');
+
+            // 1. Definícia Systémovej Inštrukcie a Promptu
+            const systemPrompt = `Si finančný analytik. Tvojou úlohou je roztriediť položky bločku do jednej z nasledujúcich kategórií: ${categoriesText}. Položky, ktoré nepasujú, zaraď do 'Uncategorized'. Následne pre každú kategóriu spočítaj celkovú sumu. Tvoj výstup MUSÍ byť čistý, validný JSON objekt, ktorý presne zodpovedá definovanej schéme. Výstup NEsmie obsahovať žiadne iné texty, vysvetlenia ani Markdown.`;
+            const userQuery = `Roztrieď a spočítaj sumy pre kategórie. Vstup je: \n${itemText}`;
+            
+            // 2. Definícia JSON Schémy pre štruktúrovaný výstup
+            const responseSchema = {
+                type: "ARRAY",
+                description: "Zoznam kategórií s ich celkovými súčtami. Pole musí obsahovať každú z kategórií, aj keď je suma 0.",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        "category": { 
+                            "type": "STRING", 
+                            "description": `Názov kategórie. Musí byť jedna z: ${GEMINI_CATEGORIES.join(', ')}.`
+                        },
+                        "totalAmount": { 
+                            "type": "NUMBER", 
+                            "description": "Celková suma (sum) pre všetky položky v danej kategórii. Použi bodku ako desatinný oddeľovač (napr. 15.50)."
+                        },
+                        "items": {
+                            "type": "ARRAY",
+                            "description": "Zoznam položiek, ktoré patria do tejto kategórie (iba názov položky a jej cena).",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "name": { "type": "STRING" },
+                                    "price": { "type": "STRING" }
+                                }
+                            }
+                        }
+                    },
+                    "required": ["category", "totalAmount", "items"]
+                }
+            };
+            
+            // 3. Konštrukcia Payloadu
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                config: { // Používame 'config' namiesto 'generationConfig' pre prehľadnosť v tomto kontexte
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema
+                }
+            };
+
+            const apiUrl = `${GEMINI_API_URL}${API_KEY}`;
+            let finalResult = null;
+
+            // 4. Implementácia exponenciálneho backoffu (max 3 pokusy)
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        signal: AbortSignal.timeout(15000) // Timeout 15 sekúnd
+                    });
+
+                    if (response.status === 429 && attempt < 2) { 
+                        const delay = Math.pow(2, attempt) * 1000 + 500;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Gemini API HTTP Error: ${response.status} ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (jsonText) {
+                        finalResult = JSON.parse(jsonText);
+                        break; // Úspech
+                    } else {
+                         throw new Error("Odpoveď Gemini neobsahovala text.");
+                    }
+
+                } catch (e) {
+                    if (attempt === 2) {
+                        outputElement.textContent = `
+CHYBA KATEGORIZÁCIE:
+Nepodarilo sa spustiť AI. Chyba: ${e.message}
+                        `.trim();
+                        outputElement.classList.remove('text-purple-600', 'animate-pulse');
+                        outputElement.classList.add('text-red-700', 'font-mono');
+                        console.error("Gemini Error:", e);
+                        return null;
+                    }
+                    // Pokračujeme na ďalší pokus
+                    const delay = Math.pow(2, attempt) * 1000 + 500;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            
+            if (finalResult) {
+                 // Zobrazenie naformátovaného JSON
+                const formattedJson = JSON.stringify(finalResult, null, 2);
+                outputElement.textContent = formattedJson;
+                outputElement.classList.remove('text-purple-600', 'animate-pulse');
+                outputElement.classList.add('font-mono', 'text-gray-800');
+            }
+
+            return finalResult;
+        }
+        
+        /**
+         * Spracuje manuálne zadaný KB kód.
+         */
+        function handleManualInput() {
+            const kbInput = document.getElementById('kb-input');
+            const kbCode = kbInput.value.trim();
+            const errorElement = document.getElementById('camera-error');
+            
+            errorElement.classList.add('hidden'); // Skryjeme predchádzajúce chyby kamery
+
+            if (!kbCode) {
+                errorElement.textContent = "CHYBA: Zadajte KB kód (nesmie byť prázdny).";
+                errorElement.classList.remove('hidden');
+                return;
+            }
+
+            // 1. Zastavíme skener, ak beží
+            if (html5QrcodeScanner) {
+                try {
+                    html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť po manuálnom zadaní:", e));
+                } catch (e) {
+                    // Ignorujeme
+                }
+            }
+
+            // 2. Spustíme rovnakú logiku spracovania ako pri skenovaní
+            // Použijeme onScanSuccess s null pre decodedResult
+            onScanSuccess(kbCode, null); 
+        }
+
+
         let html5QrcodeScanner;
 
         /**
-         * Funkcia volaná po úspešnom skenovaní QR kódu.
+         * Funkcia volaná po úspešnom skenovaní QR kódu (alebo manuálnom zadaní).
          * @param {string} decodedText Obsah QR kódu.
+         * @param {any} decodedResult Výsledok skenovania (null pri manuálnom zadaní).
          */
         async function onScanSuccess(decodedText, decodedResult) {
             
-            if (html5QrcodeScanner) {
+            // Ak je decodedResult null, skenovanie neprebehlo (bolo manuálne), takže skener už nečistíme
+            if (decodedResult !== null && html5QrcodeScanner) {
                 try {
-                    // Krok 1: Bezpečne ukončíme skener
+                    // Krok 1a: Bezpečne ukončíme skener, ak sme ho použili
                     await html5QrcodeScanner.clear();
+                } catch(err) {
+                    console.warn("Skener sa nepodarilo vyčistiť po skenovaní:", err);
+                }
+            }
 
-                    document.getElementById('qr-content').textContent = decodedText;
-                    document.getElementById('qr-content').classList.remove('text-gray-400');
+            try {
+                // Krok 1b: Aktualizácia UI
+                document.getElementById('qr-content').textContent = decodedText;
+                document.getElementById('qr-content').classList.remove('text-gray-400');
+                document.getElementById('qr-content-card').classList.remove('hidden'); 
+                document.getElementById('api-output-card').classList.remove('hidden'); 
+
+                // Krok 2: Odoslanie dát na spracovanie cez API (získame aj položky)
+                const receiptData = await fetchReceiptData(decodedText);
+
+                if (receiptData) {
+                        // Krok 3: Volanie Gemini AI pre kategorizáciu
+                    await callGeminiCategorization(receiptData.items);
                     
-                    // Krok 2: Odoslanie dát na spracovanie cez API
-                    const result = await fetchReceiptData(decodedText);
-
-                    // Krok 3: Generovanie Deep Link
+                    // Krok 4: Generovanie Deep Link
                     const deeplinkCard = document.getElementById('deeplink-card');
                     const deeplinkOutput = document.getElementById('deeplink-output');
                     const deeplinkButton = document.getElementById('open-deeplink-button');
 
-                    if (result) {
-                        // Použijeme získané dáta na vytvorenie Deep Linku
-                        const deeplink = generateDeepLink(decodedText, result.issueDate, result.shopName, result.totalPrice);
-                        
-                        deeplinkOutput.textContent = deeplink;
-                        deeplinkButton.href = deeplink;
-                        deeplinkCard.classList.remove('hidden'); 
-                    } else {
-                        deeplinkCard.classList.add('hidden'); 
-                        deeplinkOutput.textContent = 'Deeplink nebol vygenerovaný kvôli chybe pri získavaní dát.';
-                    }
-
-                } catch(err) {
-                    console.error("Chyba po skenovaní/pri API volaní: ", err);
-                    document.getElementById('camera-error').textContent = `CHYBA: Nepodarilo sa spracovať sken. ${err.message}`;
-                    document.getElementById('camera-error').classList.remove('hidden');
+                    // Použijeme získané dáta na vytvorenie Deep Linku
+                    const deeplink = generateDeepLink(decodedText, receiptData.issueDate, receiptData.shopName, receiptData.totalPrice);
+                    
+                    deeplinkOutput.textContent = deeplink;
+                    deeplinkButton.href = deeplink;
+                    deeplinkCard.classList.remove('hidden'); 
+                } else {
+                    document.getElementById('deeplink-card').classList.add('hidden'); 
+                    document.getElementById('gemini-output-card').classList.add('hidden');
+                    document.getElementById('deeplink-output').textContent = 'Deeplink nebol vygenerovaný kvôli chybe pri získavaní dát.';
                 }
+
+            } catch(err) {
+                console.error("Chyba po spracovaní: ", err);
+                document.getElementById('camera-error').textContent = `CHYBA: Nepodarilo sa spracovať kód. ${err.message}`;
+                document.getElementById('camera-error').classList.remove('hidden');
             }
         }
 
@@ -413,8 +633,15 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
             document.getElementById('qr-content').classList.add('text-gray-400');
             document.getElementById('python-output').textContent = 'Výsledok API volania.';
             document.getElementById('python-output').classList.add('text-gray-400');
-            document.getElementById('deeplink-output').textContent = 'Deeplink sa vygeneruje po úspešnom spracovaní.';
+            document.getElementById('gemini-output').textContent = 'Výsledok kategorizácie AI.';
+            document.getElementById('gemini-output').classList.add('text-gray-400');
+
+            // Skryť karty s výsledkami
+            document.getElementById('qr-content-card').classList.add('hidden'); 
+            document.getElementById('api-output-card').classList.add('hidden'); 
+            document.getElementById('gemini-output-card').classList.add('hidden'); 
             document.getElementById('deeplink-card').classList.add('hidden'); 
+
             document.getElementById('camera-error').classList.add('hidden');
 
             // Vytvorenie inštancie skenera
@@ -441,24 +668,18 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
             // Až potom spustíme skener
             startScanner();
 
-            // ⭐ NOVÁ LOGIKA: Reštart skenera po kliknutí na Deeplink
+            // NOVÉ: Nastavenie tlačidla pre manuálne zadanie
+            document.getElementById('submit-kb-button').addEventListener('click', handleManualInput);
+
+            // Reštart skenera po kliknutí na Deeplink
             document.getElementById('open-deeplink-button').addEventListener('click', () => {
-                // Skener je už zvyčajne zastavený funkciou onScanSuccess, ale pre istotu ho reštartujeme/vyčistíme
-                if (html5QrcodeScanner) {
-                    try {
-                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť po Deeplinku:", e));
-                    } catch (e) {
-                        // Ignorujeme
-                    }
-                }
-                
                 // Vyčistíme div pre skener a znova ho spustíme
                 document.getElementById('reader').innerHTML = '';
                 startScanner();
             });
 
 
-            // Nastavenie tlačidla pre reset skenovania (zostáva pôvodné)
+            // Nastavenie tlačidla pre reset skenovania/reštart
             document.getElementById('reset-button').addEventListener('click', () => {
                 if (html5QrcodeScanner) {
                     try {
