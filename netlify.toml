@@ -1,12 +1,8 @@
 [build]
-
-Definuje, kde sú uložené vaše funkcie
-
+# Definuje, kde sú uložené vaše funkcie
 functions = "netlify/functions"
 publish = "." # Uverejní koreňový priečinok (kde je qr-scanner.html)
 
 [functions]
-
-Nastaví runtime na Node.js pre funkcie
-
+# Nastaví runtime na Node.js pre funkcie
 node_bundler = "esbuild"
