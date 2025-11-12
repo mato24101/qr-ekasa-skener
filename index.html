@@ -31,7 +31,8 @@
 <body class="bg-gray-50 min-h-screen p-4 sm:p-8">
 
     <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border border-gray-100">
-        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2 text-center">
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2
+             text-center">
             Bločko skener
         </h1>
         <p class="text-center text-gray-500 mb-8">
@@ -138,8 +139,15 @@
         
         // Konštanta pre Cashew App Link URI (Aktualizované na HTTPS transakčný endpoint)
         const DEEP_LINK_SCHEME = "https://cashewapp.web.app/addTransaction";
-        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=";
-        const API_KEY = ""; // Bude automaticky vyplnené v Canvas prostredí
+        
+        // *** DÔLEŽITÉ PRE NASADENIE NA GITHUB PAGES / NETLIFY / VERCEL ***
+        // Pri nasadení na statický hosting (mimo Canvas) musíte klientske volania 
+        // presmerovať cez serverless funkciu (backend proxy), ktorá bezpečne drží Váš API kľúč.
+        // Cesta je príklad pre Netlify Functions:
+        const PROXY_ENDPOINT = "/.netlify/functions/gemini-proxy"; 
+        
+        // Pôvodné konštanty GEMINI_API_URL a API_KEY sú odstránené, pretože 
+        // sa už nepoužívajú pri volaní priamo z prehliadača.
 
         // Hardcoded kategórie/subkategórie pre dropdown
         const CATEGORY_MAP = {
@@ -331,25 +339,27 @@
                             // *** KĽÚČOVÁ ZMENA: Extrahovanie položiek ***
                             const items = data.receipt.items.map(item => ({
                                 itemName: item.name,
-                                totalPrice: item.price // cena položky (string/number)
+                                totalPrice: item.totalPrice // cena položky (string/number)
                             }));
-                            
+
+                            // --- NOVÁ ČASŤ: Formátovanie položiek pre výpis ---
                             const formattedItems = items.map(item => 
                                 `${item.itemName}: ${item.totalPrice} EUR`
                             ).join('\n  '); // Indent pre lepšiu čitateľnosť
 
-
                             const resultText = `
-                            Dáta z QR kódu (KB kód): ${kb_code}
+Dáta z QR kódu (KB kód): ${kb_code}
 
 --- VÝSLEDOK API VOLANIA ---
 Dátum vystavenia (issueDate): ${issueDate}
 Názov predajne (sellerName): ${shopName}
 Celková cena (totalPrice): ${totalPrice}
 Počet položiek: ${items.length}
+
 Položky bločku:
   ${formattedItems}
                             `.trim();
+                            // --- KONIEC NOVEJ ČASTI ---
 
                             outputElement.textContent = resultText;
                             outputElement.classList.remove('text-yellow-600', 'animate-pulse');
@@ -395,6 +405,7 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
 
         /**
          * Volá Gemini API na kategorizáciu položiek bločku.
+         * Pri nasadení na GitHub Pages sa toto volanie presmeruje na Váš backend proxy.
          * @param {Array<{itemName: string, totalPrice: string}>} items Zoznam položiek bločku.
          * @returns {Promise<Object | null>} Kategorizované dáta alebo null pri chybe.
          */
@@ -445,17 +456,15 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                 }
             };
             
-            // 3. Konštrukcia Payloadu
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                config: { // Používame 'config' namiesto 'generationConfig' pre prehľadnosť v tomto kontexte
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema
-                }
+            // 3. Konštrukcia Payloadu pre PROXY
+            // Odosielame prompt a schému na náš vlastný backend/proxy.
+            const payloadForProxy = {
+                systemPrompt: systemPrompt,
+                userQuery: userQuery,
+                responseSchema: responseSchema
             };
 
-            const apiUrl = `${GEMINI_API_URL}${API_KEY}`;
+            const apiUrl = PROXY_ENDPOINT; // Voláme vlastný proxy server
             let finalResult = null;
 
             // 4. Implementácia exponenciálneho backoffu (max 3 pokusy)
@@ -464,7 +473,7 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
+                        body: JSON.stringify(payloadForProxy),
                         signal: AbortSignal.timeout(15000) // Timeout 15 sekúnd
                     });
 
@@ -475,17 +484,18 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                     }
 
                     if (!response.ok) {
-                        throw new Error(`Gemini API HTTP Error: ${response.status} ${response.statusText}`);
+                        // Ak proxy vráti chybu (napr. 500), dostaneme ju tu.
+                        const errorBody = await response.text();
+                        throw new Error(`Proxy Error: ${response.status} ${response.statusText}. Response: ${errorBody.substring(0, 100)}...`);
                     }
 
-                    const result = await response.json();
+                    // Očakávame, že proxy nám vráti PRIAMO čistý JSON objekt (už spracovaný)
+                    finalResult = await response.json();
                     
-                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (jsonText) {
-                        finalResult = JSON.parse(jsonText);
+                    if (finalResult) {
                         break; // Úspech
                     } else {
-                         throw new Error("Odpoveď Gemini neobsahovala text.");
+                         throw new Error("Proxy vrátilo prázdnu alebo neplatnú odpoveď.");
                     }
 
                 } catch (e) {
@@ -496,7 +506,7 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
                         `.trim();
                         outputElement.classList.remove('text-purple-600', 'animate-pulse');
                         outputElement.classList.add('text-red-700', 'font-mono');
-                        console.error("Gemini Error:", e);
+                        console.error("Gemini Proxy Error:", e);
                         return null;
                     }
                     // Pokračujeme na ďalší pokus
