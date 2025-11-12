@@ -49,7 +49,7 @@
             <div class="md:w-1/2 flex flex-col gap-6">
                 
                 <!-- NEW: Manuálne zadanie KB kódu -->
-                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner">
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner hidden">
                     <h2 class="text-xl font-bold text-blue-800 mb-2">1. Manuálne Zadanie KB Kódu</h2>
                     <p class="text-sm text-blue-600 mb-3">
                         Zadajte eKasa KB kód ručne, ak sa QR kód nedá naskenovať.
@@ -150,8 +150,7 @@
         // Konštanty pre Cashew App Link URI
         // Pôvodné pre JEDNU transakciu: const DEEP_LINK_SCHEME = "https://cashewapp.web.app/addTransaction";
         // NOVÉ pre VIAC transakcií (AI JSON): 
-        const IMPORT_TRANSACTIONS_DEEP_LINK = "https://cashewapp.web.app/importTransactions";
-        const SINGLE_TRANSACTION_DEEP_LINK = "https://cashewapp.web.app/addTransaction";
+        const TRANSACTION_DEEP_LINK = "https://cashewapp.web.app/addTransaction";
         
         // Endpoint pre volanie Netlify Function
         const PROXY_ENDPOINT = "/.netlify/functions/gemini-proxy"; 
@@ -181,7 +180,7 @@
 
         // Zjednodušené kategórie pre Gemini LLM
         const GEMINI_CATEGORIES = [
-            'Groceries', 'Dining', 'Shopping', 'Health', 'Pets', 'Enterteinment', 'Gifts', 'Beauty', 'Uncategorized'
+            'Groceries', 'Shopping', 'Pets', 'Clothing', 'Electonics', 'Drugstore', 'Toys'
         ];
 
         // Hardcoded účty pre dropdown
@@ -286,9 +285,25 @@
             }
 
             return {
-                url: `${SINGLE_TRANSACTION_DEEP_LINK}?${params.join('&')}`,
+                url: `${TRANSACTION_DEEP_LINK}?${params.join('&')}`,
                 description: "HTTPS URI vytvorená pre mobilnú aplikáciu Cashew s jedinou transakciou."
             };
+        }
+
+
+        /**
+         * Pomocná funkcia na nájdenie dát kategórie (type: category/subcategory) 
+         * podľa jej hodnoty (value: Groceries, Lunch, atď.).
+         * @param {string} value Hodnota kategórie (napr. 'Groceries' alebo 'Lunch').
+         * @returns {{type: string, value: string} | null} Objekt s typom a hodnotou, alebo null.
+         */
+        function findCategoryDataByValue(value) {
+            for (const data of Object.values(CATEGORY_MAP)) {
+                if (data.value === value) {
+                    return data;
+                }
+            }
+            return null;
         }
 
 
@@ -311,23 +326,31 @@
             const validCategories = aiCategorizationData.filter(cat => cat.totalAmount > 0);
 
             const transactions = validCategories.map(cat => {
-                // Konvertujeme sumu na zápornú s bodkou
-                const amount = "-" + String(cat.totalAmount).replace(',', '.');
+                // 1. Získame kompletné dáta kategórie (vrátane typu)
+                const categoryData = findCategoryDataByValue(cat.category);
                 
-                // Zoznam položiek pre poznámku
-                const itemsList = cat.items.map(item => `   - ${item.name} (${item.price} €)`).join('\n');
-                
-                // Komplexná poznámka s detailom položiek
-                const notes = `${baseNotes}\n\nKategória: ${cat.category}\nPoložky:\n${itemsList}`;
-
-                return {
+                // Pripravíme objekt pre transakciu
+                const transaction = {
                     title: baseTitle,
-                    category: cat.category, // Zoberieme kategóriu priamo z AI
-                    amount: amount,
-                    notes: notes,
+                    amount: "-" + String(cat.totalAmount).replace(',', '.'), // Záporná suma s bodkou
+                    notes: `eKasa Blok ID: ${kb_code} (AI generated - ${cat.category})`, 
                     account: selectedAccount,
                     date: issueDate
                 };
+
+                // 2. Pridáme buď 'category' alebo 'subcategory' na základe nájdeného typu
+                if (categoryData && categoryData.type === 'category') {
+                    transaction.category = categoryData.value;
+                } else if (categoryData && categoryData.type === 'subcategory') {
+                    // POZOR: Kategórie od Gemini sú zjednodušené (napr. 'Groceries' - čo je category), 
+                    // ale pre prípad subcategory by sme to sem pridali.
+                    transaction.subcategory = categoryData.value; 
+                } else {
+                    // Záložný mechanizmus, ak sa kategória nenájde v mape
+                    transaction.category = cat.category;
+                }
+                
+                return transaction;
             });
             
             // Konštrukcia finálneho JSON objektu
@@ -338,7 +361,7 @@
             const jsonString = JSON.stringify(transactionPayload);
             
             // Cashew link vyžaduje URL-encoded JSON ako parameter 'json'
-            const deeplink = `${IMPORT_TRANSACTIONS_DEEP_LINK}?json=${encodeURIComponent(jsonString)}`;
+            const deeplink = `${TRANSACTION_DEEP_LINK}?JSON=${encodeURIComponent(jsonString)}`;
 
             return {
                 url: deeplink,
@@ -402,7 +425,7 @@
                             // *** KĽÚČOVÁ ZMENA: Extrahovanie položiek ***
                             const items = data.receipt.items.map(item => ({
                                 itemName: item.name,
-                                totalPrice: item.totalPrice // cena položky (string/number)
+                                totalPrice: item.price // cena položky (string/number)
                             }));
 
                             // --- NOVÁ ČASŤ: Formátovanie položiek pre výpis ---
@@ -501,17 +524,7 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                             "type": "NUMBER", 
                             "description": "Celková suma (sum) pre všetky položky v danej kategórii. Použi bodku ako desatinný oddeľovač (napr. 15.50)."
                         },
-                        "items": {
-                            "type": "ARRAY",
-                            "description": "Zoznam položiek, ktoré patria do tejto kategórie (iba názov položky a jej cena).",
-                            "items": {
-                                "type": "OBJECT",
-                                "properties": {
-                                    "name": { "type": "STRING" },
-                                    "price": { "type": "STRING" }
-                                }
-                            }
-                        }
+                    
                     },
                     "required": ["category", "totalAmount", "items"]
                 }
@@ -663,8 +676,52 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
 
                     if (useAi) {
                         // Krok 3a: Volanie Gemini AI pre kategorizáciu
-                        aiData = await callGeminiCategorization(receiptData.items);
-                        
+                        //aiData = await callGeminiCategorization(receiptData.items);
+                        aiData = [
+                                    {
+                                        "category": "Groceries",
+                                        "totalAmount": 12,
+                                        "items": []
+                                    },
+                                    {
+                                        "category": "Dining",
+                                        "totalAmount": 15,
+                                    },
+                                    {
+                                        "category": "Clothing",
+                                        "totalAmount": 50.8,
+                                    },
+                                    {
+                                        "category": "Health",
+                                        "totalAmount": 0,
+                                        "items": []
+                                    },
+                                    {
+                                        "category": "Pets",
+                                        "totalAmount": 0,
+                                        "items": []
+                                    },
+                                    {
+                                        "category": "Enterteinment",
+                                        "totalAmount": 0,
+                                        "items": []
+                                    },
+                                    {
+                                        "category": "Gifts",
+                                        "totalAmount": 0,
+                                        "items": []
+                                    },
+                                    {
+                                        "category": "Beauty",
+                                        "totalAmount": 0,
+                                        "items": []
+                                    },
+                                    {
+                                        "category": "Uncategorized",
+                                        "totalAmount": 0,
+                                        "items": []
+                                    }
+                                ]
                         if (aiData) {
                             // Krok 4a: Generovanie Deep Linku z AI dát
                             deeplinkInfo = generateDeepLinkFromAI(
