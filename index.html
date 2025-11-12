@@ -676,52 +676,52 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
 
                     if (useAi) {
                         // Krok 3a: Volanie Gemini AI pre kategorizáciu
-                        //aiData = await callGeminiCategorization(receiptData.items);
-                        aiData = [
-                                    {
-                                        "category": "Groceries",
-                                        "totalAmount": 12,
-                                        "items": []
-                                    },
-                                    {
-                                        "category": "Dining",
-                                        "totalAmount": 15,
-                                    },
-                                    {
-                                        "category": "Clothing",
-                                        "totalAmount": 50.8,
-                                    },
-                                    {
-                                        "category": "Health",
-                                        "totalAmount": 0,
-                                        "items": []
-                                    },
-                                    {
-                                        "category": "Pets",
-                                        "totalAmount": 0,
-                                        "items": []
-                                    },
-                                    {
-                                        "category": "Enterteinment",
-                                        "totalAmount": 0,
-                                        "items": []
-                                    },
-                                    {
-                                        "category": "Gifts",
-                                        "totalAmount": 0,
-                                        "items": []
-                                    },
-                                    {
-                                        "category": "Beauty",
-                                        "totalAmount": 0,
-                                        "items": []
-                                    },
-                                    {
-                                        "category": "Uncategorized",
-                                        "totalAmount": 0,
-                                        "items": []
-                                    }
-                                ]
+                        aiData = await callGeminiCategorization(receiptData.items);
+                        // aiData = [
+                        //             {
+                        //                 "category": "Groceries",
+                        //                 "totalAmount": 12,
+                        //                 "items": []
+                                    // },
+                                    // {
+                                    //     "category": "Dining",
+                                    //     "totalAmount": 15,
+                                    // },
+                                    // {
+                                    //     "category": "Clothing",
+                                    //     "totalAmount": 50.8,
+                                    // },
+                                    // {
+                                    //     "category": "Health",
+                                    //     "totalAmount": 0,
+                                    //     "items": []
+                                    // },
+                                    // {
+                                    //     "category": "Pets",
+                                    //     "totalAmount": 0,
+                                    //     "items": []
+                                    // },
+                                //     {
+                                //         "category": "Enterteinment",
+                                //         "totalAmount": 0,
+                                //         "items": []
+                                //     },
+                                //     {
+                                //         "category": "Gifts",
+                                //         "totalAmount": 0,
+                                //         "items": []
+                                //     },
+                                //     {
+                                //         "category": "Beauty",
+                                //         "totalAmount": 0,
+                                //         "items": []
+                                //     },
+                                //     {
+                                //         "category": "Uncategorized",
+                                //         "totalAmount": 0,
+                                //         "items": []
+                                //     }
+                                // ]
                         if (aiData) {
                             // Krok 4a: Generovanie Deep Linku z AI dát
                             deeplinkInfo = generateDeepLinkFromAI(
