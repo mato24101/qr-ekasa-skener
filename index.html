@@ -879,6 +879,7 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
                 if (html5QrcodeScanner) {
                     try {
                         html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
+                        html5QrcodeScanner = null;
                     } catch (e) {
                         // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
                     }
