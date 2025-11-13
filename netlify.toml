@@ -6,3 +6,8 @@ publish = "." # Uverejní koreňový priečinok (kde je qr-scanner.html)
 [functions]
 # Nastaví runtime na Node.js pre funkcie
 node_bundler = "esbuild"
+
+[[headers]]
+  for = "/manifest.json"  # Alebo "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
