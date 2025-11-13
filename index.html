@@ -49,7 +49,7 @@
             <div class="md:w-1/2 flex flex-col gap-6">
                 
                 <!-- NEW: Manuálne zadanie KB kódu -->
-                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner hidden">
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner">
                     <h2 class="text-xl font-bold text-blue-800 mb-2">1. Manuálne Zadanie KB Kódu</h2>
                     <p class="text-sm text-blue-600 mb-3">
                         Zadajte eKasa KB kód ručne, ak sa QR kód nedá naskenovať.
@@ -190,7 +190,9 @@
             'Cash'
         ];
 
-
+        const categorySelect = document.getElementById('category-select');
+        const accountSelect = document.getElementById('account-select');
+        
         /**
          * Dynamicky naplní dropdown menu kategóriami a účtami.
          */
@@ -228,6 +230,8 @@
         }
 
 
+
+
         /**
          * Odstráni diakritiku (mäkčene a dĺžne) zo slovenského textu.
          * @param {string} text Vstupný text.
@@ -239,6 +243,65 @@
             const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             return normalized;
         }
+
+        let receiptData = null; // Nastavte na null na začiatku. Zmeňte to, keď dáta dorazia.
+        let deeplinkInfo = null; // Pre uloženie aktuálneho deeplinku
+        let aiData = null;
+        
+
+        function handleDropdownChange() {
+            // 1. Kontrola, či sú dáta z účtenky dostupné
+            const useAi = document.getElementById('use-ai-checkbox').checked;
+            if (!receiptData) {
+                console.warn("receiptData nie sú dostupné. Deeplink nebude pregenerovaný.");
+                return; // Zastaví sa, ak dáta nie sú k dispozícii
+            }
+
+            // 2. Získanie aktuálnych hodnôt
+            const selectedCategoryValue = categorySelect.value;
+            const selectedAccountValue = accountSelect.value;
+
+            // 3. Pregenerovanie deeplinku
+            if(useAi){
+                if (aiData) {
+                deeplinkInfo = generateDeepLinkFromAI(
+                                decodedText, 
+                                receiptData.issueDate, 
+                                receiptData.shopName, 
+                                selectedAccount, 
+                                aiData
+                            );
+                }else{
+                    return;
+                }
+
+            
+            }else {
+                deeplinkInfo = generateDeepLink(
+                            decodedText, 
+                            receiptData.issueDate, 
+                            receiptData.shopName, 
+                            receiptData.totalPrice
+                        );
+            }
+
+            DeeplinkShow(deeplinkInfo);
+
+            console.log("Nový Deeplink bol pregenerovaný:", deeplinkInfo);
+
+            // 4. Implementujte tu logiku na zobrazenie nového deeplinku (napr. aktualizácia URL, zobrazenie na obrazovke)
+            // window.history.pushState(null, '', currentDeeplink); // Ak chcete aktualizovať URL v prehliadači
+            // document.getElementById('deeplink-output').textContent = currentDeeplink; // Ak ho chcete zobraziť
+        }
+            
+        document.addEventListener('DOMContentLoaded', () => {
+        categorySelect.addEventListener('change', handleDropdownChange);
+        accountSelect.addEventListener('change', handleDropdownChange);
+    
+        // Inicializácia pri štarte (ak by už dáta boli dostupné pri načítaní stránky)
+        handleDropdownChange(); 
+        handleDropdownChange(); 
+        });
 
         /**
          * Generuje Cashew transakčný link na základe získaných dát a VÝBERU POUŽÍVATEĽA (jedna transakcia).
@@ -633,7 +696,9 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
 
 
         let html5QrcodeScanner;
-
+        let decodedText = null;
+        // let deeplinkInfo = null;
+        // let receiptData = null;
         /**
          * Funkcia volaná po úspešnom skenovaní QR kódu (alebo manuálnom zadaní).
          * @param {string} decodedText Obsah QR kódu.
@@ -666,62 +731,18 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
                 manualCatSection.style.display = useAi ? 'none' : 'block';
 
                 // Krok 2: Odoslanie dát na spracovanie cez API
-                const receiptData = await fetchReceiptData(decodedText);
+                receiptData = await fetchReceiptData(decodedText);
 
                 if (receiptData) {
-                    let deeplinkInfo = null;
-                    let aiData = null;
+                    
+                    //let aiData = null;
                     const selectedAccount = document.getElementById('account-select').value;
 
 
                     if (useAi) {
                         // Krok 3a: Volanie Gemini AI pre kategorizáciu
                         aiData = await callGeminiCategorization(receiptData.items);
-                        // aiData = [
-                        //             {
-                        //                 "category": "Groceries",
-                        //                 "totalAmount": 12,
-                        //                 "items": []
-                                    // },
-                                    // {
-                                    //     "category": "Dining",
-                                    //     "totalAmount": 15,
-                                    // },
-                                    // {
-                                    //     "category": "Clothing",
-                                    //     "totalAmount": 50.8,
-                                    // },
-                                    // {
-                                    //     "category": "Health",
-                                    //     "totalAmount": 0,
-                                    //     "items": []
-                                    // },
-                                    // {
-                                    //     "category": "Pets",
-                                    //     "totalAmount": 0,
-                                    //     "items": []
-                                    // },
-                                //     {
-                                //         "category": "Enterteinment",
-                                //         "totalAmount": 0,
-                                //         "items": []
-                                //     },
-                                //     {
-                                //         "category": "Gifts",
-                                //         "totalAmount": 0,
-                                //         "items": []
-                                //     },
-                                //     {
-                                //         "category": "Beauty",
-                                //         "totalAmount": 0,
-                                //         "items": []
-                                //     },
-                                //     {
-                                //         "category": "Uncategorized",
-                                //         "totalAmount": 0,
-                                //         "items": []
-                                //     }
-                                // ]
+                        
                         if (aiData) {
                             // Krok 4a: Generovanie Deep Linku z AI dát
                             deeplinkInfo = generateDeepLinkFromAI(
@@ -748,14 +769,15 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
                     
                     // Krok 5: Zobrazenie Deep Linku
                     if (deeplinkInfo) {
-                        const deeplinkCard = document.getElementById('deeplink-card');
-                        const deeplinkOutput = document.getElementById('deeplink-output');
-                        const deeplinkButton = document.getElementById('open-deeplink-button');
+                        DeeplinkShow(deeplinkInfo);
+                        // const deeplinkCard = document.getElementById('deeplink-card');
+                        // const deeplinkOutput = document.getElementById('deeplink-output');
+                        // const deeplinkButton = document.getElementById('open-deeplink-button');
 
-                        deeplinkOutput.textContent = deeplinkInfo.url;
-                        deeplinkButton.href = deeplinkInfo.url;
-                        deeplinkDescElement.textContent = deeplinkInfo.description; // Aktualizujeme popis
-                        deeplinkCard.classList.remove('hidden'); 
+                        // deeplinkOutput.textContent = deeplinkInfo.url;
+                        // deeplinkButton.href = deeplinkInfo.url;
+                        // deeplinkDescElement.textContent = deeplinkInfo.description; // Aktualizujeme popis
+                        // deeplinkCard.classList.remove('hidden'); 
                     }
 
 
@@ -771,6 +793,19 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
                 document.getElementById('camera-error').classList.remove('hidden');
             }
         }
+
+        function DeeplinkShow(deeplinkInfo){
+            const deeplinkCard = document.getElementById('deeplink-card');
+            const deeplinkOutput = document.getElementById('deeplink-output');
+            const deeplinkButton = document.getElementById('open-deeplink-button');
+            const deeplinkDescElement = document.getElementById('deeplink-description');
+
+            deeplinkOutput.textContent = deeplinkInfo.url;
+            deeplinkButton.href = deeplinkInfo.url;
+            deeplinkDescElement.textContent = deeplinkInfo.description; // Aktualizujeme popis
+            deeplinkCard.classList.remove('hidden'); 
+        }
+
 
         /**
          * Funkcia volaná v prípade chyby skenovania/spustenia kamery.
@@ -871,6 +906,7 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
                 // Vyčistíme div pre skener a znova ho spustíme
                 document.getElementById('reader').innerHTML = '';
                 startScanner();
+
             });
 
 
