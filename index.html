@@ -506,7 +506,7 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
             const categoriesText = GEMINI_CATEGORIES.join(', ');
 
             // 1. Definícia Systémovej Inštrukcie a Promptu
-            const systemPrompt = `Si finančný analytik. Tvojou úlohou je roztriediť položky bločku do jednej z nasledujúcich kategórií: ${categoriesText}. Položky, ktoré nepasujú, zaraď do 'Uncategorized'. Následne pre každú kategóriu spočítaj celkovú sumu. Tvoj výstup MUSÍ byť čistý, validný JSON objekt, ktorý presne zodpovedá definovanej schéme. Výstup NEsmie obsahovať žiadne iné texty, vysvetlenia ani Markdown.`;
+            const systemPrompt = `Si finančný analytik. Tvojou úlohou je roztriediť položky bločku do jednej z nasledujúcich kategórií: ${categoriesText}. Položky, ktoré nepasujú, zaraď do 'Shopping'. Následne pre každú kategóriu spočítaj celkovú sumu. Tvoj výstup MUSÍ byť čistý, validný JSON objekt, ktorý presne zodpovedá definovanej schéme. Výstup NEsmie obsahovať žiadne iné texty, vysvetlenia ani Markdown.`;
             const userQuery = `Roztrieď a spočítaj sumy pre kategórie. Vstup je: \n${itemText}`;
             
             // 2. Definícia JSON Schémy pre štruktúrovaný výstup
@@ -526,7 +526,7 @@ Nepodarilo sa pripojiť k serveru alebo: ${e.message}
                         },
                     
                     },
-                    "required": ["category", "totalAmount", "items"]
+                    "required": ["category", "totalAmount"]
                 }
             };
             
