@@ -876,14 +876,14 @@ Nepodarilo sa spustiť AI. Chyba: ${e.message}
 
             // Nastavenie tlačidla pre reset skenovania/reštart
             document.getElementById('reset-button').addEventListener('click', () => {
-                if (html5QrcodeScanner) {
-                    try {
-                        html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
-                        html5QrcodeScanner = null;
-                    } catch (e) {
-                        // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
-                    }
-                }
+                // if (html5QrcodeScanner) {
+                //     try {
+                //         html5QrcodeScanner.clear().catch(e => console.warn("Skener sa nepodarilo zastaviť:", e));
+                //         html5QrcodeScanner = null;
+                //     } catch (e) {
+                //         // Ignorujeme, ak už bol zastavený/neúplne inicializovaný
+                //     }
+                // }
                 
                 // Vyčistíme div pre skener a znova ho spustíme
                 document.getElementById('reader').innerHTML = '';
