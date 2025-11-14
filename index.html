@@ -187,11 +187,12 @@
         const ACCOUNTS = [
             'Xtb', // Predvolený účet by mal byť hore
             '365',
-            'Cash'
+            'XTB-2'
         ];
 
         const categorySelect = document.getElementById('category-select');
         const accountSelect = document.getElementById('account-select');
+        const AICheckbox = document.getElementById('use-ai-checkbox');
         
         /**
          * Dynamicky naplní dropdown menu kategóriami a účtami.
@@ -293,13 +294,24 @@
             // window.history.pushState(null, '', currentDeeplink); // Ak chcete aktualizovať URL v prehliadači
             // document.getElementById('deeplink-output').textContent = currentDeeplink; // Ak ho chcete zobraziť
         }
+
+        function handleCheckboxChange(){
+            const useAi = document.getElementById('use-ai-checkbox').checked;
+            if(useAi){
+               
+                document.getElementById('manual-category-section').classList.add('hidden'); // Skryjeme link, kým sa nevygeneruje
+            }else{
+                 document.getElementById('manual-category-section').classList.remove('hidden'); 
+            }
+
+        }
             
         document.addEventListener('DOMContentLoaded', () => {
         categorySelect.addEventListener('change', handleDropdownChange);
         accountSelect.addEventListener('change', handleDropdownChange);
+        AICheckbox.addEventListener('change', handleCheckboxChange);
     
         // Inicializácia pri štarte (ak by už dáta boli dostupné pri načítaní stránky)
-        handleDropdownChange(); 
         handleDropdownChange(); 
         });
 
