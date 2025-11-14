@@ -33,10 +33,10 @@
     <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border border-gray-100">
         <h1 class="text-3xl font-extrabold text-indigo-700 mb-2
              text-center">
-            Bločko skener
+            Bločko skener s AI triedením
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Naskenuj eKasa QR kód alebo zadaj KB kód ručne a vygeneruje si link pre Cashew App.
+            Naskenuj eKasa QR kód a vygeneruje si link pre Cashew App.
         </p>
 
         <div class="flex flex-col md:flex-row gap-8">
@@ -49,7 +49,7 @@
             <div class="md:w-1/2 flex flex-col gap-6">
                 
                 <!-- NEW: Manuálne zadanie KB kódu -->
-                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner">
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-inner hidden">
                     <h2 class="text-xl font-bold text-blue-800 mb-2">1. Manuálne Zadanie KB Kódu</h2>
                     <p class="text-sm text-blue-600 mb-3">
                         Zadajte eKasa KB kód ručne, ak sa QR kód nedá naskenovať.
@@ -106,14 +106,14 @@
 
                     <div id="manual-category-section">
                         <div class="mb-4">
-                            <label for="category-select" class="block text-sm font-medium text-yellow-700 mb-1">Kategória / Subkategória (Manuálne):</label>
+                            <label for="category-select" class="block text-sm font-medium text-yellow-700 mb-1">Kategória / Subkategória:</label>
                             <select id="category-select" class="w-full p-2 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 transition duration-150 shadow-sm text-gray-800">
                                 </select>
                         </div>
                     </div>
                     
                     <div>
-                        <label for="account-select" class="block text-sm font-medium text-yellow-700 mb-1">Účet (Account):</label>
+                        <label for="account-select" class="block text-sm font-medium text-yellow-700 mb-1">Účet:</label>
                         <select id="account-select" class="w-full p-2 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 transition duration-150 shadow-sm text-gray-800">
                             </select>
                     </div>
@@ -129,7 +129,7 @@
                         <span class="text-gray-400">Deeplink sa vygeneruje po úspešnom spracovaní.</span>
                     </div>
                     <a id="open-deeplink-button" href="#" target="_blank" class="block text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md">
-                        Import to Cashew (Vyskúšať)
+                        Import do Cashew
                     </a>
                 </div>
 
@@ -268,7 +268,7 @@
                                 decodedText, 
                                 receiptData.issueDate, 
                                 receiptData.shopName, 
-                                selectedAccount, 
+                                selectedAccountValue, 
                                 aiData
                             );
                 }else{
